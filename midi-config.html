@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI CC Controller Config</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .connection-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-text {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+            transition: background 0.3s;
+        }
+
+        .status-dot.connected {
+            background: #4caf50;
+            box-shadow: 0 0 8px #4caf50;
+        }
+
+        .status-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-connect {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-connect:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-connect:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .controls-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .control-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 80px;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .input-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        input[type="number"] {
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            width: 100%;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        input[type="number"]:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .btn-set {
+            background: #667eea;
+            color: white;
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .btn-set:hover:not(:disabled) {
+            background: #5568d3;
+        }
+
+        .output-section {
+            margin-bottom: 20px;
+        }
+
+        #output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.5;
+            border: 1px solid #333;
+        }
+
+        .output-empty {
+            color: #666;
+            font-style: italic;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-action {
+            padding: 10px 16px;
+            font-size: 12px;
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-action:hover:not(:disabled) {
+            background: #e0e0e0;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #1565c0;
+            margin-top: 20px;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .error {
+            background: #ffebee;
+            border-left-color: #f44336;
+            color: #c62828;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .control-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎹 MIDI CC Config</h1>
+        <p class="subtitle">Arduino MIDI Controller Setup</p>
+
+        <!-- Connection Status -->
+        <div class="connection-status">
+            <div class="status-text">
+                <div class="status-dot" id="statusDot"></div>
+                <span class="status-label" id="statusLabel">Disconnected</span>
+            </div>
+            <span id="portName" style="font-size: 12px; color: #666;"></span>
+        </div>
+
+        <!-- Connection Buttons -->
+        <div class="button-group">
+            <button class="btn-connect" id="connectBtn" onclick="connectSerial()">Connect Arduino</button>
+            <button class="btn-secondary" id="disconnectBtn" onclick="disconnectSerial()" disabled>Disconnect</button>
+        </div>
+
+        <!-- MIDI CC Controls -->
+        <div class="controls-section">
+            <div class="section-title">MIDI CC Mapping</div>
+            <div id="controlsContainer"></div>
+        </div>
+
+        <!-- Output -->
+        <div class="output-section">
+            <div class="section-title">Response</div>
+            <div id="output" class="output-empty">Waiting for connection...</div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="btn-action" id="statusBtn" onclick="sendStatus()" disabled>Get Status</button>
+            <button class="btn-action" id="resetBtn" onclick="sendReset()" disabled>Reset Defaults</button>
+        </div>
+
+        <!-- Info -->
+        <div class="info-box">
+            <strong>💡 How to use:</strong>
+            1. Click "Connect Arduino"<br>
+            2. Set CC values (0-127) for each input<br>
+            3. Click "Set" to save<br>
+            4. Settings persist on Arduino
+        </div>
+    </div>
+
+    <script>
+        let port = null;
+        let reader = null;
+        let outputBuffer = '';
+
+        const controlsContainer = document.getElementById('controlsContainer');
+        const output = document.getElementById('output');
+        const statusDot = document.getElementById('statusDot');
+        const statusLabel = document.getElementById('statusLabel');
+        const portName = document.getElementById('portName');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const statusBtn = document.getElementById('statusBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // Create 6 control rows
+        for (let i = 0; i < 6; i++) {
+            const row = document.createElement('div');
+            row.className = 'control-row';
+            row.innerHTML = `
+                <label class="input-label">Input ${i}</label>
+                <input type="number" id="cc${i}" min="0" max="127" value="${20 + i}" disabled>
+                <button class="btn-set" id="setBtn${i}" onclick="sendCC(${i})" disabled>Set</button>
+            `;
+            controlsContainer.appendChild(row);
+        }
+
+        async function connectSerial() {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
+                
+                updateConnectionStatus(true);
+                addLog('✓ Connected to Arduino');
+                
+                // Enable controls
+                document.querySelectorAll('input[type="number"]').forEach(el => el.disabled = false);
+                document.querySelectorAll('.btn-set').forEach(el => el.disabled = false);
+                statusBtn.disabled = false;
+                resetBtn.disabled = false;
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+
+                // Start reading
+                readSerial();
+
+                // Request initial status
+                setTimeout(() => sendStatus(), 500);
+            } catch (error) {
+                addLog(`✗ Connection failed: ${error.message}`, true);
+            }
+        }
+
+        async function disconnectSerial() {
+            if (port) {
+                if (reader) {
+                    await reader.cancel();
+                }
+                await port.close();
+                port = null;
+                reader = null;
+                
+                updateConnectionStatus(false);
+                addLog('Disconnected from Arduino');
+                
+                // Disable controls
+                document.querySelectorAll('input[type="number"]').forEach(el => el.disabled = true);
+                document.querySelectorAll('.btn-set').forEach(el => el.disabled = true);
+                statusBtn.disabled = true;
+                resetBtn.disabled = true;
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            }
+        }
+
+        async function readSerial() {
+            if (!port) return;
+
+            reader = port.readable.getReader();
+            const decoder = new TextDecoder();
+
+            try {
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const text = decoder.decode(value);
+                    outputBuffer += text;
+
+                    // Process complete lines
+                    const lines = outputBuffer.split('\n');
+                    outputBuffer = lines.pop(); // Keep incomplete line
+
+                    lines.forEach(line => {
+                        if (line.trim()) {
+                            addLog(line);
+                        }
+                    });
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    addLog(`✗ Read error: ${error.message}`, true);
+                }
+            } finally {
+                reader.releaseLock();
+                if (port) {
+                    readSerial(); // Restart reading
+                }
+            }
+        }
+
+        async function sendCommand(cmd) {
+            if (!port) {
+                addLog('✗ Not connected', true);
+                return;
+            }
+
+            const writer = port.writable.getWriter();
+            try {
+                await writer.write(new TextEncoder().encode(cmd + '\n'));
+                addLog(`→ ${cmd}`);
+            } catch (error) {
+                addLog(`✗ Send error: ${error.message}`, true);
+            } finally {
+                writer.releaseLock();
+            }
+        }
+
+        async function sendCC(channel) {
+            const ccValue = parseInt(document.getElementById(`cc${channel}`).value);
+            
+            if (isNaN(ccValue) || ccValue < 0 || ccValue > 127) {
+                addLog('✗ CC value must be 0-127', true);
+                return;
+            }
+
+            await sendCommand(`SET:${channel}:${ccValue}`);
+        }
+
+        async function sendStatus() {
+            await sendCommand('STATUS');
+        }
+
+        async function sendReset() {
+            if (confirm('Reset all CC values to defaults (20-25)?')) {
+                await sendCommand('RESET');
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            if (connected) {
+                statusDot.classList.add('connected');
+                statusLabel.textContent = 'Connected';
+                portName.textContent = port.getInfo().usbProductName || 'Arduino';
+            } else {
+                statusDot.classList.remove('connected');
+                statusLabel.textContent = 'Disconnected';
+                portName.textContent = '';
+            }
+        }
+
+        function addLog(message, isError = false) {
+            const timestamp = new Date().toLocaleTimeString();
+            const line = document.createElement('div');
+            if (isError) {
+                line.style.color = '#ff6b6b';
+            }
+            line.textContent = `[${timestamp}] ${message}`;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+            
+            // Keep only last 50 lines
+            while (output.children.length > 50) {
+                output.removeChild(output.firstChild);
+            }
+
+            if (output.classList.contains('output-empty')) {
+                output.classList.remove('output-empty');
+            }
+        }
+
+        // Check if Web Serial API is available
+        if (!navigator.serial) {
+            addLog('✗ Web Serial API not supported in this browser', true);
+            document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+            const infoBox = document.querySelector('.info-box');
+            infoBox.innerHTML += '<br><strong>Supported browsers:</strong> Chrome, Edge, Opera (not Firefox/Safari)';
+        }
+    </script>
+</body>
+</html>
