@@ -327,10 +327,12 @@
             border-radius: 10px;
             font-family: 'Monaco', 'Courier New', monospace;
             font-size: 12px;
-            max-height: 220px;
+            height: 220px;
             overflow-y: auto;
             line-height: 1.6;
             scroll-behavior: smooth;
+            display: flex;
+            flex-direction: column;
         }
 
         #output::-webkit-scrollbar {
@@ -350,6 +352,12 @@
             background: var(--accent-primary);
         }
 
+        .output-line {
+            min-height: 1.6em;
+            word-wrap: break-word;
+            word-break: break-all;
+        }
+
         .output-empty {
             color: var(--text-tertiary);
             font-style: italic;
@@ -358,7 +366,7 @@
 
         .action-buttons {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 12px;
             margin-bottom: 30px;
         }
@@ -466,6 +474,7 @@
         <!-- Action Buttons -->
         <div class="action-buttons">
             <button class="btn-action" id="statusBtn" onclick="sendStatus()" disabled>Get Status</button>
+            <button class="btn-action" id="valuesBtn" onclick="sendValues()" disabled>Get Values</button>
             <button class="btn-action" id="resetBtn" onclick="sendReset()" disabled>Reset Defaults</button>
         </div>
 
@@ -489,6 +498,7 @@
         const connectBtn = document.getElementById('connectBtn');
         const disconnectBtn = document.getElementById('disconnectBtn');
         const statusBtn = document.getElementById('statusBtn');
+        const valuesBtn = document.getElementById('valuesBtn');
         const resetBtn = document.getElementById('resetBtn');
 
         // Create 6 control rows
@@ -515,6 +525,7 @@
                 document.querySelectorAll('input[type="number"]').forEach(el => el.disabled = false);
                 document.querySelectorAll('.btn-set').forEach(el => el.disabled = false);
                 statusBtn.disabled = false;
+                valuesBtn.disabled = false;
                 resetBtn.disabled = false;
                 connectBtn.disabled = true;
                 disconnectBtn.disabled = false;
@@ -545,6 +556,7 @@
                 document.querySelectorAll('input[type="number"]').forEach(el => el.disabled = true);
                 document.querySelectorAll('.btn-set').forEach(el => el.disabled = true);
                 statusBtn.disabled = true;
+                valuesBtn.disabled = true;
                 resetBtn.disabled = true;
                 connectBtn.disabled = false;
                 disconnectBtn.disabled = true;
@@ -619,6 +631,10 @@
             await sendCommand('STATUS');
         }
 
+        async function sendValues() {
+            await sendCommand('VALUES');
+        }
+
         async function sendReset() {
             if (confirm('Reset all CC values to defaults (20-25)?')) {
                 await sendCommand('RESET');
@@ -640,12 +656,17 @@
         function addLog(message, isError = false) {
             const timestamp = new Date().toLocaleTimeString();
             const line = document.createElement('div');
+            line.className = 'output-line';
             if (isError) {
                 line.style.color = '#ef4444';
             }
             line.textContent = `[${timestamp}] ${message}`;
             output.appendChild(line);
-            output.scrollTop = output.scrollHeight;
+            
+            // Auto-scroll to bottom
+            setTimeout(() => {
+                output.scrollTop = output.scrollHeight;
+            }, 0);
             
             // Keep only last 50 lines
             while (output.children.length > 50) {
