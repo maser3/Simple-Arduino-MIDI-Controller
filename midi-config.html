@@ -44,7 +44,6 @@
             overflow: hidden;
         }
 
-        /* Animated gradient background */
         body::before {
             content: '';
             position: fixed;
@@ -364,11 +363,9 @@
             font-family: 'Monaco', 'Courier New', monospace;
             font-size: 12px;
             height: 220px;
-            overflow-y: auto;
+            overflow-y: scroll;
             line-height: 1.6;
             scroll-behavior: smooth;
-            display: flex;
-            flex-direction: column;
         }
 
         #output::-webkit-scrollbar {
@@ -389,7 +386,7 @@
         }
 
         .output-line {
-            min-height: 1.6em;
+            margin-bottom: 4px;
             word-wrap: break-word;
             word-break: break-all;
         }
@@ -514,7 +511,7 @@
         <!-- Output -->
         <div class="section">
             <div class="section-title">Response Console</div>
-            <div id="output" class="output-empty">Waiting for connection...</div>
+            <div id="output"></div>
         </div>
 
         <!-- Action Buttons -->
@@ -571,6 +568,9 @@
             `;
             controlsContainer.appendChild(row);
         }
+
+        // Initialize output with welcome message
+        addLog('Waiting for connection...');
 
         async function connectSerial() {
             try {
@@ -643,12 +643,13 @@
 
                     // Process complete lines
                     const lines = outputBuffer.split('\n');
-                    outputBuffer = lines.pop(); // Keep incomplete line
+                    outputBuffer = lines.pop();
 
                     lines.forEach(line => {
-                        if (line.trim()) {
-                            addLog(line);
-                            parseValues(line);
+                        const trimmed = line.trim();
+                        if (trimmed) {
+                            addLog(trimmed);
+                            parseValues(trimmed);
                         }
                     });
                 }
@@ -659,28 +660,23 @@
             } finally {
                 reader.releaseLock();
                 if (port) {
-                    readSerial(); // Restart reading
+                    readSerial();
                 }
             }
         }
 
         function parseValues(line) {
-            // Look for patterns like "A0:523 A1:412" or "INPUT_VALUES: A0=523 A1=412"
-            const patterns = [
-                /A(\d)[:=](\d+)/g,  // Matches A0:523 or A0=523
-            ];
-
-            patterns.forEach(pattern => {
-                let match;
-                while ((match = pattern.exec(line)) !== null) {
-                    const index = parseInt(match[1]);
-                    const value = parseInt(match[2]);
-                    if (index >= 0 && index < 6 && !isNaN(value)) {
-                        inputValues[index] = value;
-                        updateValueDisplay(index, value);
-                    }
+            // Match A0:523, A0=523, A0 523 patterns
+            const regex = /A(\d)[\s:=]+(\d+)/g;
+            let match;
+            while ((match = regex.exec(line)) !== null) {
+                const index = parseInt(match[1]);
+                const value = parseInt(match[2]);
+                if (index >= 0 && index < 6 && !isNaN(value)) {
+                    inputValues[index] = value;
+                    updateValueDisplay(index, value);
                 }
-            });
+            }
         }
 
         function updateValueDisplay(index, value) {
@@ -754,18 +750,13 @@
             line.textContent = `[${timestamp}] ${message}`;
             output.appendChild(line);
             
-            // Auto-scroll to bottom
-            setTimeout(() => {
-                output.scrollTop = output.scrollHeight;
-            }, 0);
+            // Scroll to bottom
+            output.scrollTop = output.scrollHeight;
             
-            // Keep only last 50 lines
-            while (output.children.length > 50) {
-                output.removeChild(output.firstChild);
-            }
-
-            if (output.classList.contains('output-empty')) {
-                output.classList.remove('output-empty');
+            // Keep only last 100 lines
+            const lines = output.querySelectorAll('.output-line');
+            if (lines.length > 100) {
+                lines[0].remove();
             }
         }
 
