@@ -319,6 +319,42 @@
             cursor: not-allowed;
         }
 
+        .values-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .value-card {
+            background: rgba(26, 31, 58, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .value-card:hover {
+            border-color: var(--accent-primary);
+            background: rgba(26, 31, 58, 0.8);
+        }
+
+        .value-label {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .value-display {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent-primary);
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
         #output {
             background: rgba(10, 14, 39, 0.6);
             color: var(--accent-primary);
@@ -432,6 +468,10 @@
             .action-buttons {
                 grid-template-columns: 1fr;
             }
+
+            .values-container {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -457,6 +497,12 @@
         <div class="button-group">
             <button class="btn-connect" id="connectBtn" onclick="connectSerial()">Connect Arduino</button>
             <button class="btn-secondary" id="disconnectBtn" onclick="disconnectSerial()" disabled>Disconnect</button>
+        </div>
+
+        <!-- Live Input Values -->
+        <div class="section">
+            <div class="section-title">Live Input Values</div>
+            <div class="values-container" id="valuesContainer"></div>
         </div>
 
         <!-- MIDI CC Controls -->
@@ -489,8 +535,10 @@
         let port = null;
         let reader = null;
         let outputBuffer = '';
+        const inputValues = [0, 0, 0, 0, 0, 0];
 
         const controlsContainer = document.getElementById('controlsContainer');
+        const valuesContainer = document.getElementById('valuesContainer');
         const output = document.getElementById('output');
         const statusDot = document.getElementById('statusDot');
         const statusLabel = document.getElementById('statusLabel');
@@ -500,6 +548,17 @@
         const statusBtn = document.getElementById('statusBtn');
         const valuesBtn = document.getElementById('valuesBtn');
         const resetBtn = document.getElementById('resetBtn');
+
+        // Create 6 value display cards
+        for (let i = 0; i < 6; i++) {
+            const card = document.createElement('div');
+            card.className = 'value-card';
+            card.innerHTML = `
+                <div class="value-label">A${i}</div>
+                <div class="value-display" id="val${i}">---</div>
+            `;
+            valuesContainer.appendChild(card);
+        }
 
         // Create 6 control rows
         for (let i = 0; i < 6; i++) {
@@ -560,6 +619,11 @@
                 resetBtn.disabled = true;
                 connectBtn.disabled = false;
                 disconnectBtn.disabled = true;
+
+                // Reset value displays
+                for (let i = 0; i < 6; i++) {
+                    document.getElementById(`val${i}`).textContent = '---';
+                }
             }
         }
 
@@ -584,6 +648,7 @@
                     lines.forEach(line => {
                         if (line.trim()) {
                             addLog(line);
+                            parseValues(line);
                         }
                     });
                 }
@@ -596,6 +661,32 @@
                 if (port) {
                     readSerial(); // Restart reading
                 }
+            }
+        }
+
+        function parseValues(line) {
+            // Look for patterns like "A0:523 A1:412" or "INPUT_VALUES: A0=523 A1=412"
+            const patterns = [
+                /A(\d)[:=](\d+)/g,  // Matches A0:523 or A0=523
+            ];
+
+            patterns.forEach(pattern => {
+                let match;
+                while ((match = pattern.exec(line)) !== null) {
+                    const index = parseInt(match[1]);
+                    const value = parseInt(match[2]);
+                    if (index >= 0 && index < 6 && !isNaN(value)) {
+                        inputValues[index] = value;
+                        updateValueDisplay(index, value);
+                    }
+                }
+            });
+        }
+
+        function updateValueDisplay(index, value) {
+            const element = document.getElementById(`val${index}`);
+            if (element) {
+                element.textContent = value;
             }
         }
 
