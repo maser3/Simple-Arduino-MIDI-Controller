@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MIDI CC Controller Config</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -11,253 +14,414 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --bg-dark: #0a0e27;
+            --bg-secondary: #12172a;
+            --bg-tertiary: #1a1f3a;
+            --accent-primary: #00d9ff;
+            --accent-secondary: #6366f1;
+            --accent-tertiary: #a78bfa;
+            --text-primary: #f8f9fa;
+            --text-secondary: #b0b9d4;
+            --text-tertiary: #7c8aa2;
+            --success: #10b981;
+            --success-glow: #059669;
+            --error: #ef4444;
+            --border: #2a3153;
+            --border-light: #3f4769;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-secondary) 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            color: var(--text-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Animated gradient background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(0, 217, 255, 0.03) 0%, transparent 70%);
+            pointer-events: none;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(30px, -30px); }
         }
 
         .container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            max-width: 500px;
+            background: rgba(18, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 50px;
+            max-width: 600px;
             width: 100%;
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 20px 60px rgba(0, 217, 255, 0.05), 0 0 120px rgba(99, 102, 241, 0.02);
+        }
+
+        header {
+            margin-bottom: 40px;
+            text-align: center;
         }
 
         h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 28px;
+            font-family: 'Syne', sans-serif;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
         }
 
         .subtitle {
-            text-align: center;
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
 
         .connection-status {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            padding: 15px;
-            background: #f5f5f5;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+            margin-bottom: 35px;
+            padding: 16px 20px;
+            background: rgba(26, 31, 58, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .connection-status:hover {
+            border-color: var(--border-light);
+            background: rgba(26, 31, 58, 0.8);
         }
 
         .status-text {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .status-dot {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: #ccc;
-            transition: background 0.3s;
+            background: var(--text-tertiary);
+            transition: all 0.3s ease;
+            box-shadow: 0 0 0 3px rgba(124, 138, 162, 0.1);
         }
 
         .status-dot.connected {
-            background: #4caf50;
-            box-shadow: 0 0 8px #4caf50;
+            background: var(--success);
+            box-shadow: 0 0 12px var(--success), 0 0 24px rgba(16, 185, 129, 0.2);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 12px var(--success), 0 0 24px rgba(16, 185, 129, 0.2); }
+            50% { box-shadow: 0 0 20px var(--success), 0 0 40px rgba(16, 185, 129, 0.4); }
         }
 
         .status-label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        #portName {
+            font-size: 12px;
+            color: var(--text-tertiary);
             font-weight: 500;
-            color: #333;
         }
 
         .button-group {
             display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
+            gap: 12px;
+            margin-bottom: 40px;
         }
 
         button {
-            flex: 1;
-            padding: 12px 20px;
             border: none;
-            border-radius: 6px;
+            border-radius: 10px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.3px;
         }
 
         .btn-connect {
-            background: #667eea;
-            color: white;
+            flex: 1;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-primary));
+            color: var(--bg-dark);
+            font-weight: 700;
         }
 
         .btn-connect:hover:not(:disabled) {
-            background: #5568d3;
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 12px 32px rgba(99, 102, 241, 0.4), 0 0 24px rgba(0, 217, 255, 0.2);
+        }
+
+        .btn-connect:active:not(:disabled) {
+            transform: translateY(0);
         }
 
         .btn-connect:disabled {
-            background: #ccc;
+            background: var(--text-tertiary);
+            opacity: 0.4;
             cursor: not-allowed;
         }
 
         .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-            border: 1px solid #ddd;
+            flex: 1;
+            padding: 14px 24px;
+            background: rgba(42, 49, 83, 0.5);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
         }
 
         .btn-secondary:hover:not(:disabled) {
-            background: #e0e0e0;
+            background: rgba(42, 49, 83, 0.8);
+            border-color: var(--border-light);
             transform: translateY(-2px);
         }
 
         .btn-secondary:disabled {
-            opacity: 0.5;
+            opacity: 0.3;
             cursor: not-allowed;
         }
 
-        .controls-section {
-            margin-bottom: 30px;
+        .section {
+            margin-bottom: 40px;
         }
 
         .section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #666;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent-primary);
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
+            letter-spacing: 1.5px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 4px;
+            background: var(--accent-primary);
+            border-radius: 50%;
         }
 
         .control-row {
             display: grid;
-            grid-template-columns: 80px 1fr 80px;
+            grid-template-columns: 1fr 2fr 1fr;
             gap: 12px;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             align-items: center;
+            padding: 12px;
+            background: rgba(26, 31, 58, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .control-row:hover {
+            border-color: var(--border-light);
+            background: rgba(26, 31, 58, 0.6);
         }
 
         .input-label {
             font-size: 13px;
-            font-weight: 500;
-            color: #333;
+            font-weight: 600;
+            color: var(--text-secondary);
         }
 
         input[type="number"] {
-            padding: 10px 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(10, 14, 39, 0.4);
+            color: var(--accent-primary);
             font-size: 14px;
-            transition: border-color 0.3s;
-            width: 100%;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        input[type="number"]::placeholder {
+            color: var(--text-tertiary);
         }
 
         input[type="number"]:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--accent-primary);
+            background: rgba(0, 217, 255, 0.05);
+            box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
         }
 
         input[type="number"]:disabled {
-            background: #f5f5f5;
+            background: rgba(10, 14, 39, 0.2);
+            color: var(--text-tertiary);
             cursor: not-allowed;
         }
 
         .btn-set {
-            background: #667eea;
-            color: white;
             padding: 10px 16px;
+            background: rgba(163, 230, 53, 0.15);
+            color: var(--accent-primary);
+            border: 1px solid var(--accent-primary);
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .btn-set:hover:not(:disabled) {
-            background: #5568d3;
+            background: var(--accent-primary);
+            color: var(--bg-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 217, 255, 0.3);
         }
 
-        .output-section {
-            margin-bottom: 20px;
+        .btn-set:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-set:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
         }
 
         #output {
-            background: #1e1e1e;
-            color: #00ff00;
-            padding: 12px;
-            border-radius: 6px;
-            font-family: 'Courier New', monospace;
+            background: rgba(10, 14, 39, 0.6);
+            color: var(--accent-primary);
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: 10px;
+            font-family: 'Monaco', 'Courier New', monospace;
             font-size: 12px;
-            max-height: 200px;
+            max-height: 220px;
             overflow-y: auto;
-            line-height: 1.5;
-            border: 1px solid #333;
+            line-height: 1.6;
+            scroll-behavior: smooth;
+        }
+
+        #output::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #output::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #output::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 3px;
+        }
+
+        #output::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-primary);
         }
 
         .output-empty {
-            color: #666;
+            color: var(--text-tertiary);
             font-style: italic;
+            opacity: 0.6;
         }
 
         .action-buttons {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 12px;
+            margin-bottom: 30px;
         }
 
         .btn-action {
-            padding: 10px 16px;
+            padding: 12px 16px;
             font-size: 12px;
-            background: #f0f0f0;
-            color: #333;
-            border: 1px solid #ddd;
+            background: rgba(42, 49, 83, 0.5);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .btn-action:hover:not(:disabled) {
-            background: #e0e0e0;
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--accent-secondary);
+            color: var(--accent-secondary);
+            transform: translateY(-2px);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
         }
 
         .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            padding: 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            color: #1565c0;
-            margin-top: 20px;
+            background: rgba(0, 217, 255, 0.05);
+            border: 1px solid var(--accent-primary);
+            border-left: 3px solid var(--accent-primary);
+            padding: 16px;
+            border-radius: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
         }
 
         .info-box strong {
+            color: var(--accent-primary);
             display: block;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
+            font-weight: 700;
         }
 
-        .error {
-            background: #ffebee;
-            border-left-color: #f44336;
-            color: #c62828;
-        }
-
-        @media (max-width: 480px) {
+        @media (max-width: 600px) {
             .container {
-                padding: 20px;
+                padding: 30px 20px;
             }
 
             h1 {
-                font-size: 22px;
+                font-size: 32px;
+            }
+
+            .button-group {
+                flex-direction: column;
             }
 
             .control-row {
+                grid-template-columns: 1fr;
+            }
+
+            .action-buttons {
                 grid-template-columns: 1fr;
             }
         }
@@ -265,16 +429,20 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎹 MIDI CC Config</h1>
-        <p class="subtitle">Arduino MIDI Controller Setup</p>
+        <header>
+            <h1>🎹 MIDI Control</h1>
+            <p class="subtitle">Arduino MIDI Controller Configuration</p>
+        </header>
 
         <!-- Connection Status -->
         <div class="connection-status">
             <div class="status-text">
                 <div class="status-dot" id="statusDot"></div>
-                <span class="status-label" id="statusLabel">Disconnected</span>
+                <div>
+                    <span class="status-label" id="statusLabel">Disconnected</span>
+                    <div style="font-size: 11px; color: var(--text-tertiary);" id="portName"></div>
+                </div>
             </div>
-            <span id="portName" style="font-size: 12px; color: #666;"></span>
         </div>
 
         <!-- Connection Buttons -->
@@ -284,14 +452,14 @@
         </div>
 
         <!-- MIDI CC Controls -->
-        <div class="controls-section">
+        <div class="section">
             <div class="section-title">MIDI CC Mapping</div>
             <div id="controlsContainer"></div>
         </div>
 
         <!-- Output -->
-        <div class="output-section">
-            <div class="section-title">Response</div>
+        <div class="section">
+            <div class="section-title">Response Console</div>
             <div id="output" class="output-empty">Waiting for connection...</div>
         </div>
 
@@ -303,11 +471,8 @@
 
         <!-- Info -->
         <div class="info-box">
-            <strong>💡 How to use:</strong>
-            1. Click "Connect Arduino"<br>
-            2. Set CC values (0-127) for each input<br>
-            3. Click "Set" to save<br>
-            4. Settings persist on Arduino
+            <strong>💡 Quick Start</strong>
+            Connect your Arduino → Set CC values for each input → Click "Set" to save
         </div>
     </div>
 
@@ -331,7 +496,7 @@
             const row = document.createElement('div');
             row.className = 'control-row';
             row.innerHTML = `
-                <label class="input-label">Input ${i}</label>
+                <label class="input-label">Input ${i} (A${i})</label>
                 <input type="number" id="cc${i}" min="0" max="127" value="${20 + i}" disabled>
                 <button class="btn-set" id="setBtn${i}" onclick="sendCC(${i})" disabled>Set</button>
             `;
@@ -464,7 +629,7 @@
             if (connected) {
                 statusDot.classList.add('connected');
                 statusLabel.textContent = 'Connected';
-                portName.textContent = port.getInfo().usbProductName || 'Arduino';
+                portName.textContent = port.getInfo().usbProductName || 'Arduino Board';
             } else {
                 statusDot.classList.remove('connected');
                 statusLabel.textContent = 'Disconnected';
@@ -476,7 +641,7 @@
             const timestamp = new Date().toLocaleTimeString();
             const line = document.createElement('div');
             if (isError) {
-                line.style.color = '#ff6b6b';
+                line.style.color = '#ef4444';
             }
             line.textContent = `[${timestamp}] ${message}`;
             output.appendChild(line);
@@ -497,7 +662,7 @@
             addLog('✗ Web Serial API not supported in this browser', true);
             document.querySelectorAll('button').forEach(btn => btn.disabled = true);
             const infoBox = document.querySelector('.info-box');
-            infoBox.innerHTML += '<br><strong>Supported browsers:</strong> Chrome, Edge, Opera (not Firefox/Safari)';
+            infoBox.innerHTML += '<br><br><strong>⚠️ Browser Support:</strong><br>Use Chrome, Edge, or Opera (not Firefox/Safari)';
         }
     </script>
 </body>
