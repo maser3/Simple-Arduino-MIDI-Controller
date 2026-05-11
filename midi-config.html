@@ -37,11 +37,12 @@
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             padding: 20px;
             color: var(--text-primary);
             position: relative;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         body::before {
@@ -72,6 +73,7 @@
             position: relative;
             z-index: 1;
             box-shadow: 0 20px 60px rgba(0, 217, 255, 0.05), 0 0 120px rgba(99, 102, 241, 0.02);
+            margin: 40px 0;
         }
 
         header {
@@ -320,7 +322,7 @@
 
         .values-container {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
             margin-bottom: 20px;
         }
@@ -331,12 +333,18 @@
             border-radius: 8px;
             padding: 12px;
             text-align: center;
-            transition: all 0.3s ease;
+            transition: all 0.18s ease;
         }
 
         .value-card:hover {
             border-color: var(--accent-primary);
             background: rgba(26, 31, 58, 0.8);
+        }
+
+        .value-card.value-updated {
+            border-color: var(--success);
+            box-shadow: 0 0 18px rgba(16, 185, 129, 0.35);
+            transform: scale(1.03);
         }
 
         .value-label {
@@ -354,6 +362,14 @@
             font-family: 'Monaco', 'Courier New', monospace;
         }
 
+        .value-subtitle {
+            font-size: 10px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         #output {
             background: rgba(10, 14, 39, 0.6);
             color: var(--accent-primary);
@@ -363,7 +379,7 @@
             font-family: 'Monaco', 'Courier New', monospace;
             font-size: 12px;
             height: 220px;
-            overflow-y: scroll;
+            overflow-y: auto;
             line-height: 1.6;
             scroll-behavior: smooth;
         }
@@ -446,8 +462,13 @@
         }
 
         @media (max-width: 600px) {
+            body {
+                padding: 12px;
+            }
+
             .container {
                 padding: 30px 20px;
+                margin: 20px 0;
             }
 
             h1 {
@@ -479,7 +500,6 @@
             <p class="subtitle">Arduino MIDI Controller Configuration</p>
         </header>
 
-        <!-- Connection Status -->
         <div class="connection-status">
             <div class="status-text">
                 <div class="status-dot" id="statusDot"></div>
@@ -490,49 +510,45 @@
             </div>
         </div>
 
-        <!-- Connection Buttons -->
         <div class="button-group">
             <button class="btn-connect" id="connectBtn" onclick="connectSerial()">Connect Arduino</button>
             <button class="btn-secondary" id="disconnectBtn" onclick="disconnectSerial()" disabled>Disconnect</button>
         </div>
 
-        <!-- Live Input Values -->
         <div class="section">
-            <div class="section-title">Live Input Values</div>
+            <div class="section-title">Live MIDI Output Values</div>
             <div class="values-container" id="valuesContainer"></div>
         </div>
 
-        <!-- MIDI CC Controls -->
         <div class="section">
             <div class="section-title">MIDI CC Mapping</div>
             <div id="controlsContainer"></div>
         </div>
 
-        <!-- Output -->
         <div class="section">
             <div class="section-title">Response Console</div>
             <div id="output"></div>
         </div>
 
-        <!-- Action Buttons -->
         <div class="action-buttons">
             <button class="btn-action" id="statusBtn" onclick="sendStatus()" disabled>Get Status</button>
             <button class="btn-action" id="valuesBtn" onclick="sendValues()" disabled>Get Values</button>
             <button class="btn-action" id="resetBtn" onclick="sendReset()" disabled>Reset Defaults</button>
         </div>
 
-        <!-- Info -->
         <div class="info-box">
             <strong>💡 Quick Start</strong>
-            Connect your Arduino → Set CC values for each input → Click "Set" to save
+            Connect your Arduino → Change a CC number or press Set → Move a physical control → Watch its MIDI value update from 0-127
         </div>
     </div>
 
     <script>
         let port = null;
         let reader = null;
+        let isDisconnecting = false;
         let outputBuffer = '';
-        const inputValues = [0, 0, 0, 0, 0, 0];
+        const midiValues = [null, null, null, null, null, null];
+        const ccNumbers = [20, 21, 22, 23, 24, 25];
 
         const controlsContainer = document.getElementById('controlsContainer');
         const valuesContainer = document.getElementById('valuesContainer');
@@ -546,148 +562,216 @@
         const valuesBtn = document.getElementById('valuesBtn');
         const resetBtn = document.getElementById('resetBtn');
 
-        // Create 6 value display cards
-        for (let i = 0; i < 6; i++) {
+        const padLayout = [4, 5, 2, 3, 0, 1];
+
+        padLayout.forEach(i => {
             const card = document.createElement('div');
             card.className = 'value-card';
             card.innerHTML = `
-                <div class="value-label">A${i}</div>
+                <div class="value-label" id="label${i}">Input A${i}</div>
                 <div class="value-display" id="val${i}">---</div>
+                <div class="value-subtitle" id="ccLabel${i}">CC #${ccNumbers[i]}</div>
             `;
             valuesContainer.appendChild(card);
-        }
+        });
 
-        // Create 6 control rows
         for (let i = 0; i < 6; i++) {
             const row = document.createElement('div');
             row.className = 'control-row';
             row.innerHTML = `
-                <label class="input-label">Input ${i} (A${i})</label>
-                <input type="number" id="cc${i}" min="0" max="127" value="${20 + i}" disabled>
+                <label class="input-label">Input ${i} (A${i}) CC #</label>
+                <input type="number" id="cc${i}" min="0" max="127" value="${20 + i}" onchange="sendCC(${i})" onkeydown="handleCcKey(event, ${i})" disabled>
                 <button class="btn-set" id="setBtn${i}" onclick="sendCC(${i})" disabled>Set</button>
             `;
             controlsContainer.appendChild(row);
         }
 
-        // Initialize output with welcome message
         addLog('Waiting for connection...');
 
         async function connectSerial() {
             try {
+                if (!navigator.serial) {
+                    throw new Error('Web Serial API is not supported in this browser');
+                }
+
                 port = await navigator.serial.requestPort();
                 await port.open({ baudRate: 9600 });
-                
+                isDisconnecting = false;
+
                 updateConnectionStatus(true);
                 addLog('✓ Connected to Arduino');
-                
-                // Enable controls
-                document.querySelectorAll('input[type="number"]').forEach(el => el.disabled = false);
-                document.querySelectorAll('.btn-set').forEach(el => el.disabled = false);
-                statusBtn.disabled = false;
-                valuesBtn.disabled = false;
-                resetBtn.disabled = false;
-                connectBtn.disabled = true;
-                disconnectBtn.disabled = false;
 
-                // Start reading
+                setControlsEnabled(true);
                 readSerial();
 
-                // Request initial status
                 setTimeout(() => sendStatus(), 500);
             } catch (error) {
                 addLog(`✗ Connection failed: ${error.message}`, true);
+                port = null;
+                updateConnectionStatus(false);
+                setControlsEnabled(false);
             }
         }
 
         async function disconnectSerial() {
-            if (port) {
+            isDisconnecting = true;
+
+            try {
                 if (reader) {
                     await reader.cancel();
                 }
-                await port.close();
+
+                if (port) {
+                    await port.close();
+                }
+            } catch (error) {
+                addLog(`✗ Disconnect error: ${error.message}`, true);
+            } finally {
                 port = null;
                 reader = null;
-                
+                outputBuffer = '';
                 updateConnectionStatus(false);
+                setControlsEnabled(false);
+                resetValueDisplays();
                 addLog('Disconnected from Arduino');
-                
-                // Disable controls
-                document.querySelectorAll('input[type="number"]').forEach(el => el.disabled = true);
-                document.querySelectorAll('.btn-set').forEach(el => el.disabled = true);
-                statusBtn.disabled = true;
-                valuesBtn.disabled = true;
-                resetBtn.disabled = true;
-                connectBtn.disabled = false;
-                disconnectBtn.disabled = true;
-
-                // Reset value displays
-                for (let i = 0; i < 6; i++) {
-                    document.getElementById(`val${i}`).textContent = '---';
-                }
             }
         }
 
         async function readSerial() {
-            if (!port) return;
+            if (!port || !port.readable || isDisconnecting) return;
 
             reader = port.readable.getReader();
             const decoder = new TextDecoder();
 
             try {
-                while (true) {
+                while (!isDisconnecting) {
                     const { value, done } = await reader.read();
                     if (done) break;
 
-                    const text = decoder.decode(value);
+                    const text = decoder.decode(value, { stream: true });
                     outputBuffer += text;
 
-                    // Process complete lines
-                    const lines = outputBuffer.split('\n');
+                    const lines = outputBuffer.split(/\r?\n/);
                     outputBuffer = lines.pop();
 
                     lines.forEach(line => {
                         const trimmed = line.trim();
                         if (trimmed) {
                             addLog(trimmed);
-                            parseValues(trimmed);
+                            parseMidiValues(trimmed);
                         }
                     });
                 }
             } catch (error) {
-                if (error.name !== 'AbortError') {
+                if (!isDisconnecting && error.name !== 'AbortError') {
                     addLog(`✗ Read error: ${error.message}`, true);
                 }
             } finally {
-                reader.releaseLock();
-                if (port) {
+                try {
+                    reader.releaseLock();
+                } catch (error) {
+                    // Ignore lock-release errors during disconnect.
+                }
+
+                reader = null;
+
+                if (port && !isDisconnecting) {
                     readSerial();
                 }
             }
         }
 
-        function parseValues(line) {
-            // Match A0:523, A0=523, A0 523 patterns
-            const regex = /A(\d)[\s:=]+(\d+)/g;
+        function parseMidiValues(line) {
+            // Supported value formats from Arduino:
+            // A0:64, A0=64, A0 64, MIDI:A3:88, CC:A4:12
+            // CC20:64, CC 20 64
+            // VALUES:64,32,0,127,80,90
+            // 64,32,0,127,80,90
+            //
+            // Supported mapping/status formats from Arduino:
+            // MAP:A0:20, MAP 0 20, SET:0:20
+
+            parseCcMappings(line);
+
+            let foundValue = false;
+
+            const labelledRegex = /(?:MIDI|CC)?\s*:??\s*A([0-5])\s*[:=\s]+\s*(\d{1,3})/gi;
             let match;
-            while ((match = regex.exec(line)) !== null) {
-                const index = parseInt(match[1]);
-                const value = parseInt(match[2]);
-                if (index >= 0 && index < 6 && !isNaN(value)) {
-                    inputValues[index] = value;
-                    updateValueDisplay(index, value);
+
+            while ((match = labelledRegex.exec(line)) !== null) {
+                const index = Number(match[1]);
+                const value = clampMidiValue(Number(match[2]));
+                updateMidiValueDisplay(index, value);
+                foundValue = true;
+            }
+
+            const ccNumberRegex = /CC\s*#?\s*(\d{1,3})\s*[:=\s]+\s*(\d{1,3})/gi;
+            while ((match = ccNumberRegex.exec(line)) !== null) {
+                const ccNumber = Number(match[1]);
+                const value = clampMidiValue(Number(match[2]));
+                const index = ccNumbers.indexOf(ccNumber);
+
+                if (index !== -1) {
+                    updateMidiValueDisplay(index, value);
+                    foundValue = true;
+                }
+            }
+
+            if (foundValue) return;
+
+            const compactLine = line.replace(/^VALUES\s*[:=]\s*/i, '').trim();
+            if (/^\d{1,3}(\s*,\s*\d{1,3}){5}$/.test(compactLine)) {
+                compactLine.split(',').forEach((part, index) => {
+                    updateMidiValueDisplay(index, clampMidiValue(Number(part)));
+                });
+            }
+        }
+
+        function parseCcMappings(line) {
+            const mapRegex = /(?:MAP|SET)\s*:?\s*A?([0-5])\s*[:=\s]+\s*(\d{1,3})/gi;
+            let match;
+
+            while ((match = mapRegex.exec(line)) !== null) {
+                const index = Number(match[1]);
+                const ccNumber = Number(match[2]);
+
+                if (index >= 0 && index < 6 && ccNumber >= 0 && ccNumber <= 127) {
+                    ccNumbers[index] = ccNumber;
+                    const input = document.getElementById(`cc${index}`);
+                    if (input) input.value = ccNumber;
+                    updateCcLabel(index);
                 }
             }
         }
 
-        function updateValueDisplay(index, value) {
+        function clampMidiValue(value) {
+            if (!Number.isFinite(value)) return 0;
+            return Math.max(0, Math.min(127, Math.round(value)));
+        }
+
+        function updateMidiValueDisplay(index, value) {
+            if (index < 0 || index >= 6) return;
+
+            midiValues[index] = value;
+
             const element = document.getElementById(`val${index}`);
-            if (element) {
-                element.textContent = value;
+            if (!element) return;
+
+            if (element.textContent === String(value)) return;
+
+            element.textContent = value;
+
+            const card = element.closest('.value-card');
+            if (card) {
+                card.classList.remove('value-updated');
+                void card.offsetWidth;
+                card.classList.add('value-updated');
+                setTimeout(() => card.classList.remove('value-updated'), 180);
             }
         }
 
         async function sendCommand(cmd) {
-            if (!port) {
+            if (!port || !port.writable) {
                 addLog('✗ Not connected', true);
                 return;
             }
@@ -704,14 +788,35 @@
         }
 
         async function sendCC(channel) {
-            const ccValue = parseInt(document.getElementById(`cc${channel}`).value);
-            
-            if (isNaN(ccValue) || ccValue < 0 || ccValue > 127) {
-                addLog('✗ CC value must be 0-127', true);
+            const input = document.getElementById(`cc${channel}`);
+            const ccValue = Number(input.value);
+
+            if (!Number.isInteger(ccValue) || ccValue < 0 || ccValue > 127) {
+                addLog('✗ CC number must be 0-127', true);
+                input.focus();
                 return;
             }
 
+            ccNumbers[channel] = ccValue;
+            updateCcLabel(channel);
+
+            // Arduino should parse this exact command:
+            // SET:<inputIndex>:<ccNumber>
             await sendCommand(`SET:${channel}:${ccValue}`);
+        }
+
+        function handleCcKey(event, channel) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                sendCC(channel);
+            }
+        }
+
+        function updateCcLabel(channel) {
+            const label = document.getElementById(`ccLabel${channel}`);
+            if (label) {
+                label.textContent = `CC #${ccNumbers[channel]}`;
+            }
         }
 
         async function sendStatus() {
@@ -723,7 +828,7 @@
         }
 
         async function sendReset() {
-            if (confirm('Reset all CC values to defaults (20-25)?')) {
+            if (confirm('Reset all CC numbers to defaults (20-25)?')) {
                 await sendCommand('RESET');
             }
         }
@@ -732,11 +837,33 @@
             if (connected) {
                 statusDot.classList.add('connected');
                 statusLabel.textContent = 'Connected';
-                portName.textContent = port.getInfo().usbProductName || 'Arduino Board';
+
+                const info = port && typeof port.getInfo === 'function' ? port.getInfo() : {};
+                const vendor = info.usbVendorId ? `VID ${info.usbVendorId}` : '';
+                const product = info.usbProductId ? `PID ${info.usbProductId}` : '';
+                portName.textContent = [vendor, product].filter(Boolean).join(' / ') || 'Serial device';
             } else {
                 statusDot.classList.remove('connected');
                 statusLabel.textContent = 'Disconnected';
                 portName.textContent = '';
+            }
+        }
+
+        function setControlsEnabled(enabled) {
+            document.querySelectorAll('input[type="number"]').forEach(el => el.disabled = !enabled);
+            document.querySelectorAll('.btn-set').forEach(el => el.disabled = !enabled);
+            statusBtn.disabled = !enabled;
+            valuesBtn.disabled = !enabled;
+            resetBtn.disabled = !enabled;
+            connectBtn.disabled = enabled;
+            disconnectBtn.disabled = !enabled;
+        }
+
+        function resetValueDisplays() {
+            for (let i = 0; i < 6; i++) {
+                midiValues[i] = null;
+                document.getElementById(`val${i}`).textContent = '---';
+                updateCcLabel(i);
             }
         }
 
@@ -749,23 +876,19 @@
             }
             line.textContent = `[${timestamp}] ${message}`;
             output.appendChild(line);
-            
-            // Scroll to bottom
             output.scrollTop = output.scrollHeight;
-            
-            // Keep only last 100 lines
+
             const lines = output.querySelectorAll('.output-line');
             if (lines.length > 100) {
                 lines[0].remove();
             }
         }
 
-        // Check if Web Serial API is available
         if (!navigator.serial) {
             addLog('✗ Web Serial API not supported in this browser', true);
             document.querySelectorAll('button').forEach(btn => btn.disabled = true);
             const infoBox = document.querySelector('.info-box');
-            infoBox.innerHTML += '<br><br><strong>⚠️ Browser Support:</strong><br>Use Chrome, Edge, or Opera (not Firefox/Safari)';
+            infoBox.innerHTML += '<br><br><strong>⚠️ Browser Support:</strong><br>Use Chrome, Edge, or Opera. Firefox and Safari will not work.';
         }
     </script>
 </body>
